@@ -56,7 +56,7 @@ fig_pca = px.scatter(
     color_continuous_scale="Viridis",
     title="Visualização PCA dos Clusters",
 )
-st.plotly_chart(fig_pca, use_container_width=True)
+st.plotly_chart(fig_pca, width='stretch')
 
 st.subheader("Distribuição Geográfica por Cluster")
 fig_geo = px.histogram(
@@ -66,4 +66,4 @@ fig_geo = px.histogram(
     barmode="group",
     color_discrete_sequence=px.colors.qualitative.Plotly,
 )
-st.plotly_chart(fig_geo, use_container_width=True)
+st.plotly_chart(fig_geo, width='stretch')

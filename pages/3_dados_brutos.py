@@ -30,7 +30,7 @@ if tabela_selecionada:
     if busca:
         df = df[df.apply(lambda row: row.astype(str).str.contains(busca, case=False).any(), axis=1)]
     
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width='stretch')
     
     st.download_button(
         label="Baixar como CSV",

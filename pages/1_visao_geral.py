@@ -51,7 +51,7 @@ with row1_col1:
         labels={"count": "Pedidos", "City": "Cidade"},
         color_discrete_sequence=["#7209b7"],
     )
-    st.plotly_chart(fig_city, use_container_width=True)
+    st.plotly_chart(fig_city, width='stretch')
 
 with row1_col2:
     st.subheader("Distribuição por Método de Pagamento")
@@ -61,7 +61,7 @@ with row1_col2:
         hole=0.4,
         color_discrete_sequence=px.colors.qualitative.Pastel,
     )
-    st.plotly_chart(fig_pay, use_container_width=True)
+    st.plotly_chart(fig_pay, width='stretch')
 
 st.subheader("Top 10 Restaurantes por Receita")
 top_rest = (
@@ -79,4 +79,4 @@ fig_rest = px.bar(
     color="Total_Price",
     color_continuous_scale="Viridis",
 )
-st.plotly_chart(fig_rest, use_container_width=True)
+st.plotly_chart(fig_rest, width='stretch')
