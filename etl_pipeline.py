@@ -26,6 +26,7 @@ def run_etl():
     conn = sqlite3.connect(NOME_BANCO)
     cursor = conn.cursor()
 
+    print("🛠️ Criando esquema do banco de dados...")
     cursor.executescript("""
         PRAGMA foreign_keys = ON;
 
@@ -64,6 +65,9 @@ def run_etl():
         );
     """)
 
+    print("📥 Inserindo dados nas tabelas de dimensões...")
+    
+    # CLIENTES (Consolidação por moda)
     clientes = (
         df.groupby("User_ID")
         .agg(
@@ -74,16 +78,19 @@ def run_etl():
     )
     clientes.to_sql("CLIENTES", conn, if_exists="append", index=False)
 
+    # RESTAURANTES
     restaurantes = df[
         ["Restaurant_ID", "City", "Restaurant_Lat", "Restaurant_Lon"]
     ].drop_duplicates(subset="Restaurant_ID")
     restaurantes.to_sql("RESTAURANTES", conn, if_exists="append", index=False)
 
+    # ENTREGADORES
     entregadores = df[
         ["Driver_ID", "Driver_Vehicle", "Driver_Availability"]
     ].drop_duplicates(subset="Driver_ID")
     entregadores.to_sql("ENTREGADORES", conn, if_exists="append", index=False)
 
+    print("📥 Inserindo dados na tabela fato (PEDIDOS) em lotes...")
     colunas_pedidos = [
         "Order_ID",
         "User_ID",
@@ -98,10 +105,27 @@ def run_etl():
         "Delivery_Distance_km",
         "Coupon_Used",
     ]
-    df[colunas_pedidos].to_sql("PEDIDOS", conn, if_exists="append", index=False)
+    pedidos = df[colunas_pedidos]
+    
+    # Inserção em chunks (lotes) como no notebook
+    CHUNK_SIZE = 10000
+    for i in range(0, len(pedidos), CHUNK_SIZE):
+        chunk = pedidos.iloc[i : i + CHUNK_SIZE]
+        chunk.to_sql("PEDIDOS", conn, if_exists="append", index=False)
 
     print("✅ Banco de dados populado.")
 
+    # Verificação (Igual ao notebook)
+    print("=" * 45)
+    print("  📊  VERIFICAÇÃO DO BANCO — logisfast.db")
+    print("=" * 45)
+    for tabela in ["CLIENTES", "RESTAURANTES", "ENTREGADORES", "PEDIDOS"]:
+        count = cursor.execute(f"SELECT COUNT(*) FROM {tabela}").fetchone()[0]
+        marca = " ✅" if count >= 5000 else ""
+        print(f"  {tabela:<15} : {count:>7,} registros{marca}")
+    print("=" * 45)
+
+    print("🔗 Iniciando extração para segmentação...")
     query_sql = """
         SELECT
             C.User_ID,
@@ -119,20 +143,24 @@ def run_etl():
     """
     df_extraido = pd.read_sql_query(query_sql, conn)
 
+    print(f"🧹 Limpeza e normalização de {len(df_extraido):,} clientes...")
     features = ["frequencia", "ticket_medio", "tempo_entrega_medio", "taxa_uso_cupom"]
     X = df_extraido[features].copy()
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
+    print("🌀 Treinando modelo K-Means (k=4)...")
     kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
     df_extraido["Cluster"] = kmeans.fit_predict(X_scaled)
 
+    print("📐 Aplicando PCA para visualização 2D...")
     pca = PCA(n_components=2, random_state=42)
     pca_results = pca.fit_transform(X_scaled)
     df_extraido["PCA1"] = pca_results[:, 0]
     df_extraido["PCA2"] = pca_results[:, 1]
 
+    print("💾 Salvando resultados da segmentação...")
     df_extraido.to_sql("CLIENTES_SEGMENTADOS", conn, if_exists="replace", index=False)
 
     conn.commit()
