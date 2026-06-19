@@ -1,7 +1,8 @@
-import streamlit as st
-import pandas as pd
 import sqlite3
+
+import pandas as pd
 import plotly.express as px
+import streamlit as st
 
 
 def load_segmented_data():

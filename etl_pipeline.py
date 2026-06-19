@@ -20,6 +20,10 @@ def run_etl():
     df = pd.read_csv(CAMINHO_CSV)
     print(f"✅ CSV carregado: {len(df):,} linhas.")
 
+    TAXA_CAMBIO = 0.103  # Libras egípcias para reais
+
+    df["Total_Price"] = (df["Total_Price"] * TAXA_CAMBIO).round(2)
+
     if os.path.exists(NOME_BANCO):
         os.remove(NOME_BANCO)
 
@@ -66,7 +70,7 @@ def run_etl():
     """)
 
     print("📥 Inserindo dados nas tabelas de dimensões...")
-    
+
     # CLIENTES (Consolidação por moda)
     clientes = (
         df.groupby("User_ID")
@@ -106,7 +110,7 @@ def run_etl():
         "Coupon_Used",
     ]
     pedidos = df[colunas_pedidos]
-    
+
     # Inserção em chunks (lotes) como no notebook
     CHUNK_SIZE = 10000
     for i in range(0, len(pedidos), CHUNK_SIZE):
